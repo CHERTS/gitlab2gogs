@@ -43,8 +43,10 @@ func main() {
 	orgMap := make(map[string]*gogs.Organization)
 	userMap := make(map[string]*gogs.User)
 	gitlabuserMap := make(map[string]*gitlab.User)
+	gitlabgroupMap := make(map[string]*gitlab.Group)
 
-	getGogsOrg := func(name string) *gogs.Organization {
+	getGogsOrg := func(gitlaborg *gitlab.Group) *gogs.Organization {
+		name := fixName(gitlaborg.Name)
 		org, ok := orgMap[name]
 		if ok {
 			return org
@@ -55,7 +57,9 @@ func main() {
 			return org
 		}
 		createOpt := gogs.CreateOrgOption{
-			UserName: name,
+			UserName:    name,
+			FullName:    gitlaborg.Name,
+			Description: gitlaborg.Description,
 		}
 		org, err = gc.AdminCreateOrg(gogsUser, createOpt)
 		if err != nil {
@@ -100,10 +104,24 @@ func main() {
 		return gitlabuser
 	}
 
+	getGitlabGroup := func(gitlaborg *gitlab.ProjectNamespace) *gitlab.Group {
+		gitlabgroup, ok := gitlabgroupMap[gitlaborg.Name]
+		if ok {
+			return gitlabgroup
+		}
+		gitlabgroup, _, err := git.Groups.GetGroup(gitlaborg.ID)
+		if err != nil {
+			exitf("Cannot get gitlab group: %v\n", err)
+		}
+		return gitlabgroup
+	}
+
 	migrate := func(p *gitlab.Project) {
-		_, err := gc.GetRepo(p.Namespace.Name, p.Name)
+		reponame := fixName(p.Name)
+		owner := fixName(p.Namespace.Name)
+		_, err := gc.GetRepo(owner, reponame)
 		if err == nil {
-			fmt.Printf("%s | %s already exists\n", p.Namespace.Name, p.Name)
+			fmt.Printf("%s | %s already exists\n", owner, reponame)
 		} else {
 			if p.Owner != nil {
 				gitlabuser := getGitlabUser(p.Owner)
@@ -125,9 +143,10 @@ func main() {
 					exitf("Failed to migrate '%s | %s': %v\n", p.Namespace.Name, p.Name, err)
 				}
 			} else {
-				org := getGogsOrg(p.Namespace.Name)
+				gitlabgroup := getGitlabGroup(p.Namespace)
+				org := getGogsOrg(gitlabgroup)
 				name := fixName(p.Name)
-				fmt.Printf("%s | %s migrating as '%s'... (GogsOrg: ID:%d, UserName: %s)\n", p.Namespace.Name, p.Name, name, org.ID, org.UserName)
+				fmt.Printf("%s | %s migrating as '%s'... (GogsOrg: ID:%d, FullName: %s, Description: %s)\n", p.Namespace.Name, p.Name, name, org.ID, org.FullName, org.Description)
 				opts := gogs.MigrateRepoOption{
 					CloneAddr:    p.HTTPURLToRepo,
 					AuthUsername: gitlabUser,
@@ -153,9 +172,7 @@ func main() {
 	repo_cnt := 0
 	for _, p := range projects {
 		repo_cnt++
-		if repo_cnt == -1 {
-			migrate(p)
-		}
+		migrate(p)
 	}
 	fmt.Printf("Total migrate repo: %d\n", repo_cnt)
 }
@@ -172,6 +189,26 @@ func stringToVisibilityLevel(s string) *gitlab.VisibilityLevelValue {
 		return nil
 	}
 	return &value
+}
+
+func visibilityLevelToString(v gitlab.VisibilityLevelValue) *string {
+	lookup := map[gitlab.VisibilityLevelValue]string{
+		gitlab.PrivateVisibility:  "private",
+		gitlab.InternalVisibility: "internal",
+		gitlab.PublicVisibility:   "public",
+	}
+	value, ok := lookup[v]
+	if !ok {
+		return nil
+	}
+	return &value
+}
+
+func btoi(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 func fixName(name string) string {
