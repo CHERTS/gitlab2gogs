@@ -31,3 +31,5 @@ For migration of Repositories in a single Organization: `-gitlab-org <organizati
 And to migrate a single Repository within that Organization: `-gitlab-org <organization name> -gitlab-repo <repository name>`
 
 Or to migrate a single Repository without Organization: `-gitlab-repo <repository name>`
+
+To make migrated Repositories as mirror (backup) Repository: `-mirror`

@@ -22,6 +22,7 @@ var (
 	gogsUrl               string
 	gogsToken             string
 	gogsUser              string
+	gogsIsMirror          bool
 )
 
 func init() {
@@ -34,7 +35,8 @@ func init() {
 	flag.StringVar(&gogsUrl, "gogs-url", "https://gogs", "Gogs URL address")
 	flag.StringVar(&gogsToken, "gogs-token", "", "Gogs user access token")
 	flag.StringVar(&gogsUser, "gogs-user", "root", "Gogs user")
-	flag.StringVar(&gitlabOrg, "gitlab-org", "", "GitLab groups")
+	flag.BoolVar(&gogsIsMirror, "gogs-mirror", false, "Make migrated Repositories as mirror")
+	flag.StringVar(&gitlabOrg, "gitlab-org", "", "GitLab organization (group)")
 	flag.StringVar(&gitlabRepo, "gitlab-repo", "", "GitLab repository")
 }
 
@@ -134,7 +136,7 @@ func main() {
 				user := getGogsUser(gitlabuser)
 				// Fix repo name
 				name := fixName(p.Name)
-				fmt.Printf("%s | %s migrating as '%s'... (GogsUser: ID: %d, UserName: %s, Email: %s)\n", p.Namespace.Name, p.Name, name, user.ID, user.UserName, user.Email)
+				fmt.Printf("%s | %s migrating as '%s'... (GogsUser: ID: %d, UserName: %s, Email: %s, IsMirror: %d)\n", p.Namespace.Name, p.Name, name, user.ID, user.UserName, user.Email, btoi(gogsIsMirror))
 				opts := gogs.MigrateRepoOption{
 					CloneAddr:    p.HTTPURLToRepo,
 					AuthUsername: gitlabUser,
@@ -143,6 +145,7 @@ func main() {
 					RepoName:     name,
 					Private:      !p.Public,
 					Description:  p.Description,
+					Mirror:       gogsIsMirror,
 				}
 				_, err := gc.MigrateRepo(opts)
 				if err != nil {
@@ -153,7 +156,7 @@ func main() {
 				org := getGogsOrg(gitlabgroup)
 				// Fix repo name
 				name := fixName(p.Name)
-				fmt.Printf("%s | %s migrating as '%s'... (GogsOrg: ID:%d, FullName: %s, Description: %s)\n", p.Namespace.Name, p.Name, name, org.ID, org.FullName, org.Description)
+				fmt.Printf("%s | %s migrating as '%s'... (GogsOrg: ID:%d, FullName: %s, Description: %s, IsMirror: %d)\n", p.Namespace.Name, p.Name, name, org.ID, org.FullName, org.Description, btoi(gogsIsMirror))
 				opts := gogs.MigrateRepoOption{
 					CloneAddr:    p.HTTPURLToRepo,
 					AuthUsername: gitlabUser,
@@ -162,6 +165,7 @@ func main() {
 					RepoName:     name,
 					Private:      !p.Public,
 					Description:  p.Description,
+					Mirror:       gogsIsMirror,
 				}
 				_, err := gc.MigrateRepo(opts)
 				if err != nil {
