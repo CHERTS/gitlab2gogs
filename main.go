@@ -46,6 +46,7 @@ func main() {
 	gitlabgroupMap := make(map[string]*gitlab.Group)
 
 	getGogsOrg := func(gitlaborg *gitlab.Group) *gogs.Organization {
+		// Fix Org name
 		name := fixName(gitlaborg.Name)
 		org, ok := orgMap[name]
 		if ok {
@@ -145,6 +146,7 @@ func main() {
 			} else {
 				gitlabgroup := getGitlabGroup(p.Namespace)
 				org := getGogsOrg(gitlabgroup)
+				// Fix repo name
 				name := fixName(p.Name)
 				fmt.Printf("%s | %s migrating as '%s'... (GogsOrg: ID:%d, FullName: %s, Description: %s)\n", p.Namespace.Name, p.Name, name, org.ID, org.FullName, org.Description)
 				opts := gogs.MigrateRepoOption{

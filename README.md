@@ -2,7 +2,9 @@
 
 Migrate your GitLab 9.x repositories to Gogs.
 
-Usage:
+**Build Status:** [![Build Status](https://travis-ci.org/CHERTS/gitlab2gogs.svg?branch=master)](https://travis-ci.org/CHERTS/gitlab2gogs)
+
+## Usage
 
 ```
 ./gitlab2gogs -gitlab-host https://<yourgitlabhost> \
