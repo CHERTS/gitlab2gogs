@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/gogits/go-gogs-client"
 	"github.com/xanzy/go-gitlab"
@@ -16,6 +17,8 @@ var (
 	gitlabPassword        string
 	gitlabToken           string
 	gitlabVisibilityLevel string
+	gitlabOrg             string
+	gitlabRepo            string
 	gogsUrl               string
 	gogsToken             string
 	gogsUser              string
@@ -31,6 +34,8 @@ func init() {
 	flag.StringVar(&gogsUrl, "gogs-url", "https://gogs", "Gogs URL address")
 	flag.StringVar(&gogsToken, "gogs-token", "", "Gogs user access token")
 	flag.StringVar(&gogsUser, "gogs-user", "root", "Gogs user")
+	flag.StringVar(&gitlabOrg, "gitlab-org", "", "GitLab groups")
+	flag.StringVar(&gitlabRepo, "gitlab-repo", "", "GitLab repository")
 }
 
 func main() {
@@ -166,15 +171,34 @@ func main() {
 		}
 	}
 
-	opt := &gitlab.ListProjectsOptions{Visibility: stringToVisibilityLevel(gitlabVisibilityLevel), OrderBy: gitlab.String("id"), Sort: gitlab.String("desc")}
+	opt := &gitlab.ListProjectsOptions{Visibility: stringToVisibilityLevel(gitlabVisibilityLevel), OrderBy: gitlab.String("id"), Sort: gitlab.String("asc")}
 	projects, _, err := git.Projects.ListProjects(opt)
 	if err != nil {
 		exitf("Cannot get gitlab projects: %v\n", err)
 	}
+	if gitlabOrg != "" {
+		gitlabOrg = strings.ToLower(gitlabOrg)
+	}
+	if gitlabRepo != "" {
+		gitlabRepo = strings.ToLower(gitlabRepo)
+	}
 	repo_cnt := 0
 	for _, p := range projects {
-		repo_cnt++
+		if gitlabOrg != "" {
+			if gitlabOrg == strings.ToLower(p.Namespace.Name) {
+				if gitlabRepo != "" && gitlabRepo != strings.ToLower(p.Name) {
+					continue
+				}
+			} else {
+				continue
+			}
+		} else {
+			if gitlabRepo != "" && gitlabRepo != strings.ToLower(p.Name) {
+				continue
+			}
+		}
 		migrate(p)
+		repo_cnt++
 	}
 	fmt.Printf("Total migrate repo: %d\n", repo_cnt)
 }
