@@ -1,6 +1,6 @@
 # gitlab2gogs
 
-Migrate your GitLab 9.x repositories to Gogs.
+Migrate your GitLab 9.x (only APIv4) repositories to Gogs.
 
 **Build Status:** [![Build Status](https://travis-ci.org/CHERTS/gitlab2gogs.svg?branch=master)](https://travis-ci.org/CHERTS/gitlab2gogs)
 
